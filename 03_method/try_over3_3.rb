@@ -5,6 +5,21 @@ TryOver3 = Module.new
 # - `test_` から始まるインスタンスメソッドが実行された場合、このクラスは `run_test` メソッドを実行する
 # - `test_` メソッドがこのクラスに実装されていなくても `test_` から始まるメッセージに応答することができる
 # - TryOver3::A1 には `test_` から始まるインスタンスメソッドが定義されていない
+class TryOver3::A1
+  def run_test
+    nil
+  end
+
+  def method_missing(method_name, *args)
+    super unless method_name.match?(/^test_.*/)
+
+    run_test
+  end
+
+  def respond_to_missing?(method_name, include_private = false)
+    method_name.match?(/^test_.*/)
+  end
+end
 
 
 # Q2
@@ -15,6 +30,22 @@ class TryOver3::A2
   def initialize(name, value)
     instance_variable_set("@#{name}", value)
     self.class.attr_accessor name.to_sym unless respond_to? name.to_sym
+  end
+end
+
+class TryOver3::A2Proxy
+  def initialize(source)
+    @source = source
+  end
+
+  def method_missing(method_name, *args)
+    super unless @source.respond_to? method_name
+
+    @source.send(method_name, *args)
+  end
+
+  def respond_to_missing?(method_name, include_private = false)
+    @source.respond_to?(method_name)
   end
 end
 
@@ -35,6 +66,8 @@ module TryOver3::OriginalAccessor2
           self.class.define_method "#{attr_sym}?" do
             @attr == true
           end
+        else
+          self.class.undef_method "#{attr_sym}?" if respond_to?("#{attr_sym}?")
         end
         @attr = value
       end
@@ -48,6 +81,32 @@ end
 # TryOver3::A4.runners = [:Hoge]
 # TryOver3::A4::Hoge.run
 # # => "run Hoge"
+class TryOver3::A4
+  class << self
+    def runners=(runners)
+      @runners = runners
+    end
+
+    def const_missing(const)
+      return super unless @runners.include?(const)
+
+      const_set const, Class.new do |klass|
+        klass.define_singleton_method :run do
+          "run #{const}"
+        end
+#        def klass.method_missing(method_name, *args)
+#          remove_const klass
+#          "#{method_name} #{const}"
+#        end
+#
+#        def klass.respond_to_missing?(method_name, include_private = false)
+#          remove_const klass
+#          true
+#        end
+      end
+    end
+  end
+end
 
 
 # Q5. チャレンジ問題！ 挑戦する方はテストの skip を外して挑戦してみてください。
