@@ -15,12 +15,10 @@ end
 class A2
   def initialize(suffixex)
     suffixex.each do |suffix|
-      define_singleton_method("hoge_#{suffix}".to_sym) do |cnt = nil|
-        if cnt.nil?
-          dev_team
-        else
-          "hoge_#{suffix}" * cnt
-        end
+      define_singleton_method("hoge_#{suffix}".to_sym) do |cnt|
+        return dev_team unless cnt
+
+        "hoge_#{suffix}" * cnt
       end
     end
   end
@@ -46,8 +44,8 @@ module OriginalAccessor
       define_method "#{attribute}=" do |value|
         instance_variable_set("@#{attribute}", value)
 
-        if [true, false].include?(value) && !respond_to?("#{attribute}?")
-          self.class.define_method("#{attribute}?") { instance_variable_get("@#{attribute}") }
+        if [TrueClass, FalseClass].include?(value.class) && !respond_to?("#{attribute}?")
+          define_singleton_method("#{attribute}?") { instance_variable_get("@#{attribute}") }
         else
           self.class.undef_method("#{attribute}?") if respond_to?("#{attribute}?")
         end

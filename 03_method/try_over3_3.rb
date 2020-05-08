@@ -17,7 +17,7 @@ class TryOver3::A1
   end
 
   def respond_to_missing?(method_name, include_private = false)
-    method_name.match?(/^test_.*/)
+    method_name.match?(/^test_.*/) || super
   end
 end
 
@@ -45,7 +45,7 @@ class TryOver3::A2Proxy
   end
 
   def respond_to_missing?(method_name, include_private = false)
-    @source.respond_to?(method_name)
+    @source.respond_to?(method_name) || super
   end
 end
 
@@ -90,19 +90,10 @@ class TryOver3::A4
     def const_missing(const)
       return super unless @runners.include?(const)
 
-      const_set const, Class.new do |klass|
+      Class.new do |klass|
         klass.define_singleton_method :run do
           "run #{const}"
         end
-#        def klass.method_missing(method_name, *args)
-#          remove_const klass
-#          "#{method_name} #{const}"
-#        end
-#
-#        def klass.respond_to_missing?(method_name, include_private = false)
-#          remove_const klass
-#          true
-#        end
       end
     end
   end
@@ -114,17 +105,33 @@ end
 # TryOver3::TaskHelper という include すると task というクラスマクロが与えられる以下のようなモジュールがあります。
 module TryOver3::TaskHelper
   def self.included(klass)
-    klass.define_singleton_method :task do |name, &task_block|
-      new_klass = Class.new do
+    klass.instance_variable_set("@tasks", {})
+
+    klass.define_singleton_method :const_missing do |const|
+      return super(const) unless @tasks.has_key?(const)
+
+      task_block = @tasks[const]
+
+      Class.new do
         define_singleton_method :run do
+          warn "Warning: TryOver3::A5Task::#{const}.run is deprecated"
           puts "start #{Time.now}"
           block_return = task_block.call
           puts "finish #{Time.now}"
           block_return
         end
       end
-      new_klass_name = name.to_s.split("_").map{ |w| w[0] = w[0].upcase; w }.join
-      const_set(new_klass_name, new_klass)
+    end
+
+    klass.define_singleton_method :task do |name, &task_block|
+      @tasks[name.capitalize.to_sym] = task_block
+
+      klass.define_singleton_method(name) do
+        puts "start #{Time.now}"
+        block_return = task_block.call
+        puts "finish #{Time.now}"
+        block_return
+      end
     end
   end
 end
