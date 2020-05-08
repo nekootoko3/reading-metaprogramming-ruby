@@ -7,6 +7,12 @@
 # - Hash
 # - TrueClass
 
-[String, Integer, Numeric, Class, Hash, TrueClass].each do |klass|
-  klass.class_eval("def hoge; 'hoge' end")
+#[String, Integer, Numeric, Class, Hash, TrueClass].each do |klass|
+#  klass.class_eval("def hoge; 'hoge' end")
+#end
+
+module Kernel
+  def hoge
+    "hoge"
+  end
 end

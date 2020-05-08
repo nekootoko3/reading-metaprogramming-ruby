@@ -9,7 +9,7 @@ class TryOut
     raise ArgumentError unless names.length == 2 || names.length == 3
 
     @first_name = names.first
-    @middle_name = names[1] if names.length == 3
+    @middle_name = names.length == 3 ? names[1] : nil
     @last_name = names.last
   end
 
