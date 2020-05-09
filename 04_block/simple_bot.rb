@@ -26,9 +26,9 @@ class SimpleBot
   class << self
     def respond(keyword, &block)
       if block_given?
-        responses[keyword] = self.instance_eval &block
+        keywords[keyword] = self.instance_eval &block
       else
-        responses[keyword]
+        keywords[keyword]
       end
     end
 
@@ -40,8 +40,8 @@ class SimpleBot
       @settings ||= Class.new
     end
 
-    def responses
-      @responses ||= Hash.new
+    def keywords
+      @keywords ||= Hash.new
     end
   end
 
