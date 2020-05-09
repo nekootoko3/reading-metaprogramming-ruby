@@ -37,3 +37,44 @@
 # obj.imitated_method #=> true
 # obj.called_times(:imitated_method) #=> 2
 # ```
+module SimpleMock
+  class << self
+    def mock(obj)
+      obj.extend SimpleMock
+    end
+
+    def new
+      mock(Object.new)
+    end
+  end
+
+  def expects(method_name, res)
+    self.define_singleton_method(method_name) { res }
+  end
+
+  def watch(method_name)
+    self.instance_variable_set("@#{method_name}", 0)
+
+    self.singleton_class.alias_method "#{method_name}_old", method_name
+
+    self.define_singleton_method(method_name) do |*args|
+      cnt = self.instance_variable_get("@#{method_name}")
+      self.instance_variable_set("@#{method_name}", cnt + 1)
+      send("#{method_name}_old".to_sym, *args)
+    end
+  end
+
+  def called_times(method_name)
+    self.instance_variable_get("@#{method_name}")
+  end
+
+  def method_missing(method_name, *args)
+    return super unless @obj&.respond_to(method_name)
+
+    @obj.send(method_name, *args)
+  end
+
+  def respond_to_missing?(method_name, include_private = false)
+    @obj&.respond_to?(method_name)
+  end
+end
