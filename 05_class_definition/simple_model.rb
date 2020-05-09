@@ -12,3 +12,43 @@
 # 2. initializeメソッドはハッシュを受け取り、attr_accessorで作成したアトリビュートと同名のキーがあれば、自動でインスタンス変数に記録する
 #   1. ただし、この動作をwriterメソッドの履歴に残してはいけない
 # 3. 履歴がある場合、すべての操作履歴を放棄し、値も初期状態に戻す `restore!` メソッドを作成する
+module SimpleModel
+  def self.included(base)
+    base.extend ClassMethods
+  end
+
+  def initialize(**attrs)
+    @default_attrs = {}
+    attrs.each_key do |at|
+      if self.respond_to?(at)
+        @default_attrs[at] = attrs[at]
+        self.instance_variable_set("@#{at}", attrs[at])
+      end
+    end
+  end
+
+  def restore!
+    @default_attrs.each_key do |at|
+      self.instance_variable_set("@#{at}", @default_attrs[at])
+      self.instance_variable_set("@#{at}_changed", false)
+    end
+  end
+
+  module ClassMethods
+    def attr_accessor(*attrs)
+      attrs.each do |at|
+        self.define_method("#{at}") { self.instance_variable_get("@#{at}") }
+        self.define_method("#{at}=") do |value|
+          self.instance_variable_set("@#{at}", value)
+          self.instance_variable_set("@#{at}_changed", true)
+        end
+        self.define_method("#{at}_changed?") do
+          !!self.instance_variable_get("@#{at}_changed")
+        end
+      end
+      self.define_method(:changed?) do
+        attrs.any? { |at| self.instance_variable_get("@#{at}_changed") }
+      end
+    end
+  end
+end
